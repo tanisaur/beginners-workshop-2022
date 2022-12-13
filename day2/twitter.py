@@ -56,29 +56,31 @@ def twitter_resource(search_terms, start_time=None, end_time=None, api_secret_ke
         for row in response:
             row['search_term'] = search_term
             yield row
+    
+    return twitter_resource(search_terms, start_time=start_time, end_time=end_time, api_secret_key=api_secret_key)
+
+@dlt.source
+def twitter_source(search_terms, api_secret_key=dlt.secrets.value, start_time=None, end_time=None):
+    return twitter_resource(search_terms, start_time=start_time, end_time=end_time, api_secret_key=api_secret_key)
 
 if __name__=='__main__':
+
     search_terms = ['python data engineer']
+    dataset_name ='tweets'
 
-    # search last hour of tweets
+    # search last day
     from datetime import datetime, timedelta, timezone
+    
+    last_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) 
+    data_interval_start = last_midnight - timedelta(days=1)
+    data_interval_end = last_midnight
 
-    data_interval_start = datetime.now(timezone.utc) - timedelta(hours=3)
-    data_interval_end = datetime.now(timezone.utc) - timedelta(hours=2)
-
-    # format to twitter spec
     start_time = data_interval_start.isoformat()
     end_time = data_interval_end.isoformat()
 
-    data = list(twitter_resource(search_terms=search_terms, start_time=start_time, end_time=end_time))
-
-    print(data)
-
-    #exit()
     pipeline = dlt.pipeline(pipeline_name='twitter', destination='bigquery', dataset_name='twitter_data')
 
     # run the pipeline with your parameters and print the outcome
     load_info = pipeline.run(twitter_source(search_terms=search_terms, start_time=start_time, end_time=end_time))
 
     print(load_info)
-    print(f'data interval: {data_interval_start} to {data_interval_end}')
